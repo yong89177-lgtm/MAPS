@@ -71,15 +71,21 @@ const routes = {
   "upload-html": () => require("../server/upload-html.js"),
 };
 
-/* 라우트 이름은 req.url에서 직접 뽑는다 ("/api/login" -> "login").
-   vercel.json의 "/" -> "/api/render" 같은 리라이트를 거쳐 들어와도
-   req.url은 항상 실제로 매칭된 경로를 담고 있어, req.query.slug의
-   동적 라우트 채움 방식에 기대는 것보다 확실하다. */
+const { parse: parseUrl } = require("url");
+
+/* 라우트 이름을 두 가지 방식으로 찾는다.
+   1) 경로 기반: "/api/login" 처럼 직접 요청된 경우 -> "login"
+   2) 쿼리 기반: vercel.json의 "/" -> "/api/render" 리라이트를 거치면
+      Vercel이 경로는 원래 요청("/")로 그대로 두고 매칭된 동적 세그먼트를
+      쿼리스트링(?slug=render)에 붙여서 넘긴다. req.query 헬퍼가 이를
+      제대로 파싱해주지 못하는 경우가 있어, req.url을 직접 다시 파싱한다. */
 function routeNameFromUrl(reqUrl) {
-  const pathname = String(reqUrl || "").split("?")[0];
-  const parts = pathname.split("/").filter(Boolean); // ["api","login"]
-  if (parts[0] !== "api" || parts.length !== 2) return null;
-  return decodeURIComponent(parts[1]);
+  const parsed = parseUrl(String(reqUrl || ""), true);
+  const parts = (parsed.pathname || "").split("/").filter(Boolean);
+  if (parts[0] === "api" && parts.length === 2) return decodeURIComponent(parts[1]);
+  const slugParam = parsed.query && parsed.query.slug;
+  if (slugParam) return Array.isArray(slugParam) ? slugParam[0] : slugParam;
+  return null;
 }
 
 module.exports = async (req, res) => {
