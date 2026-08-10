@@ -4955,7 +4955,10 @@ if(navigator.sendBeacon){try{navigator.sendBeacon("api/site-visit");}catch(e){}}
       if(b) b.click();
     });
     var r = document.getElementById("agentRegBtn");
-    if(r) r.addEventListener("click", function(){ toast("AI Agent 등록은 준비중입니다."); });
+    if(r) r.addEventListener("click", function(){
+      var b = document.getElementById("dashReqBtn");   /* 대시보드 추가요청 모달에 위임 */
+      if(b) b.click(); else toast("AI Agent 등록은 준비중입니다.");
+    });
   })();
 
 
