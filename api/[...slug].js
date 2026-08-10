@@ -76,25 +76,30 @@ const { parse: parseUrl } = require("url");
 /* 라우트 이름을 두 가지 방식으로 찾는다.
    1) 경로 기반: "/api/login" 처럼 직접 요청된 경우 -> "login"
    2) 쿼리 기반: vercel.json의 "/" -> "/api/render" 리라이트를 거치면
-      Vercel이 경로는 원래 요청("/")로 그대로 두고 매칭된 동적 세그먼트를
-      쿼리스트링(?slug=render)에 붙여서 넘긴다. req.query 헬퍼가 이를
-      제대로 파싱해주지 못하는 경우가 있어, req.url을 직접 다시 파싱한다. */
+      Vercel이 경로는 원래 요청("/")로 그대로 두고, 매칭된 동적 세그먼트를
+      쿼리스트링에 붙여서 넘긴다 — 이때 키 이름은 "slug"가 아니라 파일명
+      그대로인 "...slug" (점 3개 포함, 실측 확인됨). 정확한 키를 가정하지
+      않도록 "slug"로 끝나는 키를 전부 찾는다. */
+function findSlugValue(query) {
+  if (!query) return null;
+  for (const key of Object.keys(query)) {
+    if (key === "slug" || key.endsWith("slug")) {
+      const v = query[key];
+      return Array.isArray(v) ? v[0] : v;
+    }
+  }
+  return null;
+}
 function routeNameFromUrl(reqUrl) {
   const parsed = parseUrl(String(reqUrl || ""), true);
   const parts = (parsed.pathname || "").split("/").filter(Boolean);
   if (parts[0] === "api" && parts.length === 2) return decodeURIComponent(parts[1]);
-  const slugParam = parsed.query && parsed.query.slug;
-  if (slugParam) return Array.isArray(slugParam) ? slugParam[0] : slugParam;
-  return null;
+  return findSlugValue(parsed.query);
 }
 
 module.exports = async (req, res) => {
   let name = routeNameFromUrl(req.url);
-  if (!name) {
-    const slugParam = (req.query && req.query.slug) || [];
-    const slug = Array.isArray(slugParam) ? slugParam : [slugParam];
-    name = slug.length === 1 ? slug[0] : null;
-  }
+  if (!name) name = findSlugValue(req.query);
   const loader = name ? routes[name] : null;
   if (!loader) {
     res.status(404).json({ ok: false, error: "알 수 없는 API 경로입니다.", path: req.url });
