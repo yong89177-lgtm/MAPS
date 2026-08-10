@@ -5,6 +5,6 @@
     { "source": "/data/dashboards.json", "destination": "/api/dashboards-data" }
   ],
   "functions": {
-    "api/render.js": { "includeFiles": "deploy/index.html" }
+    "api/[...slug].js": { "includeFiles": "deploy/index.html" }
   }
 }
