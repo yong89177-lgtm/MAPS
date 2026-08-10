@@ -71,13 +71,27 @@ const routes = {
   "upload-html": () => require("../server/upload-html.js"),
 };
 
+/* 라우트 이름은 req.url에서 직접 뽑는다 ("/api/login" -> "login").
+   vercel.json의 "/" -> "/api/render" 같은 리라이트를 거쳐 들어와도
+   req.url은 항상 실제로 매칭된 경로를 담고 있어, req.query.slug의
+   동적 라우트 채움 방식에 기대는 것보다 확실하다. */
+function routeNameFromUrl(reqUrl) {
+  const pathname = String(reqUrl || "").split("?")[0];
+  const parts = pathname.split("/").filter(Boolean); // ["api","login"]
+  if (parts[0] !== "api" || parts.length !== 2) return null;
+  return decodeURIComponent(parts[1]);
+}
+
 module.exports = async (req, res) => {
-  const slugParam = (req.query && req.query.slug) || [];
-  const slug = Array.isArray(slugParam) ? slugParam : [slugParam];
-  const name = slug[0];
-  const loader = slug.length === 1 && name ? routes[name] : null;
+  let name = routeNameFromUrl(req.url);
+  if (!name) {
+    const slugParam = (req.query && req.query.slug) || [];
+    const slug = Array.isArray(slugParam) ? slugParam : [slugParam];
+    name = slug.length === 1 ? slug[0] : null;
+  }
+  const loader = name ? routes[name] : null;
   if (!loader) {
-    res.status(404).json({ ok: false, error: "알 수 없는 API 경로입니다." });
+    res.status(404).json({ ok: false, error: "알 수 없는 API 경로입니다.", path: req.url });
     return;
   }
   const handler = loader();
