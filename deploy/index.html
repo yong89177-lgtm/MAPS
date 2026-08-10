@@ -4073,6 +4073,7 @@ document.getElementById("reqSubmit").addEventListener("click",async()=>{
   if(etcOn)features.push(etc?("기타: "+etc):"기타");
   const f=document.getElementById("rqFile").files[0];
   if(!name){setReqStatus("대시보드명을 입력하세요.","err");return;}
+  if(f&&f.size>3*1024*1024){setReqStatus("HTML 파일이 너무 큽니다 (3MB 이하만 가능). 동영상 등 큰 미디어는 base64로 문서에 넣지 말고 별도 링크로 안내해 주세요.","err");return;}
   setReqStatus("전송 중…");
   try{
     let html="",fname="";

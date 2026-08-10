@@ -7,6 +7,9 @@ module.exports = async (req, res) => {
   const body = await readBody(req);
   const name = String(body.name || "").trim();
   if (!name) return res.status(400).json({ ok: false, error: "대시보드명을 입력하세요." });
+  if (body.html && Buffer.byteLength(String(body.html), "utf8") > 3 * 1024 * 1024) {
+    return res.status(400).json({ ok: false, error: "HTML 파일이 너무 큽니다 (3MB 이하만 가능)." });
+  }
 
   const me = await getSession(req);
   let requesterName = String(body.author || "").trim();
