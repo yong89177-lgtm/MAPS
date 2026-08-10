@@ -106,5 +106,14 @@ module.exports = async (req, res) => {
     return;
   }
   const handler = loader();
-  return handler(req, res);
+  try {
+    return await handler(req, res);
+  } catch (e) {
+    /* 라우트 핸들러가 예외를 던지면 Vercel이 일반 크래시 페이지(비-JSON)를
+       돌려줘서, 브라우저 쪽 fetch().json()이 실패해 "서버에 연결할 수
+       없습니다"라는 엉뚱한 메시지로 보인다. 항상 JSON으로 원인을 내려준다. */
+    if (!res.headersSent) {
+      res.status(500).json({ ok: false, error: (e && e.message) || "서버 오류가 발생했습니다.", route: name });
+    }
+  }
 };
