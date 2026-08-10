@@ -2255,14 +2255,13 @@
       <div class="field"><label>요청자</label><input id="rqAuthor" maxlength="40" placeholder="이름 (비우면 '익명')"></div>
       <div class="field"><label>조직</label><input id="rqOrg" placeholder="예: 해외법인 양산 지원"></div>
       <div class="field"><label>설명</label><textarea id="rqDesc" rows="3" placeholder="용도·요청 사유 등"></textarea></div>
-      <div class="field"><label>기능추가</label>
+      <div class="field"><label>카테고리</label>
         <div class="feat-checks">
-          <label class="feat-item"><input type="checkbox" class="rqFeat" value="데이터 서버저장"> 데이터 서버저장</label>
-          <label class="feat-item"><input type="checkbox" class="rqFeat" value="공개(비로그인 화면)"> 공개(비로그인 화면)</label>
-          <label class="feat-item"><input type="checkbox" class="rqFeat" value="비공개(로그인 화면)"> 비공개(로그인 화면)</label>
-          <label class="feat-item"><input type="checkbox" id="rqFeatEtc"> 기타</label>
+          <label class="feat-item"><input type="checkbox" class="rqFeat" value="新 공정/공법 개발"> 新 공정/공법 개발</label>
+          <label class="feat-item"><input type="checkbox" class="rqFeat" value="해외법인 양산 지원"> 해외법인 양산 지원</label>
+          <label class="feat-item"><input type="checkbox" class="rqFeat" value="제품 개발 대응"> 제품 개발 대응</label>
+          <label class="feat-item"><input type="checkbox" class="rqFeat" value="공통 및 루틴 업무"> 공통 및 루틴 업무</label>
         </div>
-        <input id="rqFeatEtcText" placeholder="기타 내용을 입력하세요" style="margin-top:6px;display:none">
       </div>
       <div class="field"><label>HTML 파일 (선택)</label><input id="rqFile" type="file" accept=".html,.htm"></div>
     </div>
@@ -4053,13 +4052,11 @@ async function approveReq(id,approve){
 
 /* ---------- 대시보드 추가요청(사용자) ---------- */
 function setReqStatus(m,c){const e=document.getElementById("reqStatus");e.className="status"+(c?(" "+c):"");e.textContent=m;}
-(function(){var e=document.getElementById("rqFeatEtc");if(e)e.addEventListener("change",function(){document.getElementById("rqFeatEtcText").style.display=this.checked?"":"none";});})();
 document.getElementById("dashReqBtn").addEventListener("click",async()=>{
   await checkMe();
   setReqStatus("");["rqName","rqAuthor","rqOrg","rqDesc"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("rqFile").value="";
   document.querySelectorAll(".rqFeat").forEach(c=>c.checked=false);
-  document.getElementById("rqFeatEtc").checked=false;document.getElementById("rqFeatEtcText").value="";document.getElementById("rqFeatEtcText").style.display="none";
   open("reqOv");document.getElementById("rqName").focus();
 });
 document.getElementById("reqSubmit").addEventListener("click",async()=>{
@@ -4068,9 +4065,7 @@ document.getElementById("reqSubmit").addEventListener("click",async()=>{
   const org=document.getElementById("rqOrg").value.trim();
   const desc=document.getElementById("rqDesc").value.trim();
   const features=[...document.querySelectorAll(".rqFeat:checked")].map(c=>c.value);
-  const etcOn=document.getElementById("rqFeatEtc").checked;
-  const etc=etcOn?document.getElementById("rqFeatEtcText").value.trim():"";
-  if(etcOn)features.push(etc?("기타: "+etc):"기타");
+  const etc="";
   const f=document.getElementById("rqFile").files[0];
   if(!name){setReqStatus("대시보드명을 입력하세요.","err");return;}
   if(f&&f.size>3*1024*1024){setReqStatus("HTML 파일이 너무 큽니다 (3MB 이하만 가능). 동영상 등 큰 미디어는 base64로 문서에 넣지 말고 별도 링크로 안내해 주세요.","err");return;}
