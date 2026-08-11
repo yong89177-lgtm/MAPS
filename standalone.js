@@ -15,9 +15,21 @@
  */
 const http = require("http");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { parse: parseUrl } = require("url");
 const { resolveHandler } = require("./server/_lib/router");
+
+function lanAddresses() {
+  const nets = os.networkInterfaces();
+  const out = [];
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if (net.family === "IPv4" && !net.internal) out.push({ name, address: net.address });
+    }
+  }
+  return out;
+}
 
 /* --- 아주 작은 .env 로더 (별도 패키지 불필요) --- */
 (function loadDotEnv() {
@@ -135,6 +147,16 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`MAPS 서버 실행 중 — http://${HOST === "0.0.0.0" ? "이 PC의 사내망 IP" : HOST}:${PORT}`);
+  console.log("MAPS 서버 실행 중");
+  console.log(`이 PC에서 확인: http://localhost:${PORT}`);
+  if (HOST === "0.0.0.0") {
+    const addrs = lanAddresses();
+    if (addrs.length) {
+      console.log("다른 사람에게 공유할 주소:");
+      addrs.forEach((a) => console.log(`  http://${a.address}:${PORT}   (${a.name})`));
+    } else {
+      console.log("이 PC의 사내망 IP를 찾지 못했습니다 — ipconfig(Windows)로 직접 확인해주세요.");
+    }
+  }
   console.log(`데이터 저장 위치: ${process.env.DATA_DIR || path.join(__dirname, "data")}`);
 });
