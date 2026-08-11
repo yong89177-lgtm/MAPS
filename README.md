@@ -36,23 +36,26 @@
 (`data/` 폴더)에 저장됩니다.
 
 1. 그 PC/서버에 [Node.js 18 이상](https://nodejs.org)을 설치합니다.
-2. 이 저장소를 내려받습니다: `git clone https://github.com/yong89177-lgtm/MAPS.git` (또는 zip으로 다운로드)
-3. 프로젝트 폴더에서:
-   ```bash
-   npm install
-   cp .env.example .env
-   ```
-4. `.env` 파일을 열어 `ADMIN_PASSWORD`에 원하는 관리자 비밀번호를 적습니다. 포트를 8081로 쓰고 싶으면
-   `PORT=8081`도 넣어주세요 (기본값이 이미 8081입니다).
-5. 실행:
-   ```bash
-   npm start
-   ```
-   "MAPS 서버 실행 중 — http://이 PC의 사내망 IP:8081" 이 뜨면 성공입니다.
-6. 같은 사내망에 있는 다른 PC에서 `http://<이 서버의 IP>:8081` 로 접속하면 됩니다 (그 PC의 방화벽에서
-   8081 포트를 열어줘야 할 수 있습니다).
-7. 컴퓨터를 재부팅해도 계속 떠 있게 하려면 `npm start` 대신 [pm2](https://pm2.keymetrics.io/) 같은
-   프로세스 매니저나 Windows 서비스 등록 도구로 등록해두는 걸 권장합니다. (`pm2 start standalone.js --name maps`)
+2. 이 저장소를 내려받습니다 — GitHub 페이지의 초록색 **Code → Download ZIP** 버튼으로 받아서 압축을
+   풀거나, `git clone https://github.com/yong89177-lgtm/MAPS.git`.
+3. 압축 푼(또는 clone한) 폴더 안의 실행 스크립트를 더블클릭합니다.
+   - Windows: **`start-maps.bat`**
+   - Mac/Linux: **`start-maps.sh`** (터미널에서 `./start-maps.sh`로 실행하거나, Mac에서는
+     더블클릭 후 "터미널에서 열기"를 선택)
+
+   이 스크립트가 패키지 설치(사내망 보안 프로그램 때문에 흔히 나는 `SELF_SIGNED_CERT_IN_CHAIN`
+   인증서 오류도 자동으로 우회합니다), `.env` 파일 생성(최초 실행 시 관리자 비밀번호를 기본값
+   `maps1234`로 자동 설정), 서버 실행까지 전부 알아서 처리합니다. 콘솔 창에
+   **"MAPS 서버 실행 중 — http://이 PC의 사내망 IP:8081"** 이 뜨면 성공입니다.
+4. 로그인(아이디 `admin`, 비밀번호 `maps1234`) 후 관리자 콘솔 → 계정 관리에서 비밀번호를 바로
+   바꿔두세요. (미리 원하는 비밀번호를 쓰고 싶다면, 실행 전에 `.env.example`을 복사해 `.env`로
+   저장하고 `ADMIN_PASSWORD` 값을 직접 채운 뒤 스크립트를 실행하면 됩니다.)
+5. 같은 사내망에 있는 다른 PC에서 `http://<이 서버의 IP>:8081` 로 접속하면 됩니다 (그 PC의 방화벽에서
+   8081 포트를 열어줘야 할 수 있습니다). 이 PC의 IP는 명령창에서 `ipconfig`(Windows) /
+   `ifconfig`(Mac)로 확인합니다.
+6. 스크립트를 실행한 창을 닫으면 서버도 꺼집니다. 컴퓨터를 재부팅해도 계속 떠 있게 하려면
+   [pm2](https://pm2.keymetrics.io/) 같은 프로세스 매니저나 Windows 서비스 등록 도구로 등록해두는
+   걸 권장합니다 (`pm2 start standalone.js --name maps`).
 
 이 방식과 Vercel 배포는 **같은 코드베이스를 그대로 씁니다** — 서버 라우트 코드(`server/*.js`)는 동일하고,
 저장소 구현만 실행 환경에 따라 자동으로 바뀝니다 (`server/_lib/blob.js` 참고). 둘 중 하나만 선택해도 되고,
