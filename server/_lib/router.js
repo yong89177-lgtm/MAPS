@@ -6,6 +6,7 @@
 const routes = {
   "accounts": () => require("../accounts.js"),
   "admin-notifications": () => require("../admin-notifications.js"),
+  "agent": () => require("../agent.js"),
   "approve-account": () => require("../approve-account.js"),
   "approve-dash-request": () => require("../approve-dash-request.js"),
   "attach": () => require("../attach.js"),
