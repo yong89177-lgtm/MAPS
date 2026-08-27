@@ -60,6 +60,38 @@ const STATIC = {
   "/hero-bg.mp4": { file: path.join(__dirname, "hero-bg.mp4"), type: "video/mp4" },
 };
 
+/* 영상/대용량 파일은 Range 요청(구간 요청)을 반드시 지원해야 한다 — 이게 없으면
+   브라우저가 스트리밍 대신 매번 파일 전체를 새로 받으려 하고, loop 재생 때마다
+   이 과정이 반복되면서 사내망처럼 느린 구간에서 버퍼링·끊김이 심해진다. */
+function serveStaticFile(req, res, entry) {
+  fs.stat(entry.file, (err, stat) => {
+    if (err) { res.status(404).send("Not found"); return; }
+    const total = stat.size;
+    res.setHeader("Content-Type", entry.type);
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+
+    const range = req.headers.range;
+    if (!range) {
+      res.setHeader("Content-Length", total);
+      fs.createReadStream(entry.file).pipe(res);
+      return;
+    }
+
+    const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+    const start = m && m[1] ? parseInt(m[1], 10) : 0;
+    const end = m && m[2] ? parseInt(m[2], 10) : total - 1;
+    if (!m || isNaN(start) || isNaN(end) || start > end || end >= total) {
+      res.status(416).setHeader("Content-Range", `bytes */${total}`).end();
+      return;
+    }
+    res.status(206);
+    res.setHeader("Content-Range", `bytes ${start}-${end}/${total}`);
+    res.setHeader("Content-Length", end - start + 1);
+    fs.createReadStream(entry.file, { start, end }).pipe(res);
+  });
+}
+
 function wrapRes(res) {
   res.status = function (c) { res.statusCode = c; return res; };
   res.json = function (o) {
@@ -114,8 +146,7 @@ const server = http.createServer(async (req, res) => {
 
   const staticEntry = STATIC[pathname];
   if (staticEntry) {
-    res.setHeader("Content-Type", staticEntry.type);
-    fs.createReadStream(staticEntry.file).pipe(res);
+    serveStaticFile(req, res, staticEntry);
     return;
   }
 
