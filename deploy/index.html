@@ -1716,7 +1716,7 @@
   .marquee-track .t5 .v10top{
     position:relative;z-index:1;grid-column:unset;grid-row:unset;
     margin-top:44px;display:flex;flex-wrap:wrap;gap:6px;padding-right:0;min-height:0}
-  .marquee-track .t5 .v10cat{background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.35);color:#fff;backdrop-filter:blur(6px);font-size:12px;padding:4px 10px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+  .marquee-track .t5 .v10cat{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.35);color:#fff;font-size:12px;padding:4px 10px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
   .marquee-track .t5-name{
     position:relative;z-index:1;grid-column:unset;grid-row:unset;
     margin-top:9px;font-size:20px;font-weight:800;line-height:1.28;letter-spacing:-0.01em;
@@ -5586,6 +5586,11 @@ if(navigator.sendBeacon){try{navigator.sendBeacon("api/site-visit");}catch(e){}}
       fullListEl.innerHTML = "";
       fullListEl.appendChild(grid);
     }
+    /* 타일 축소/확대는 height 를 직접 애니메이션하지 않는다 — height 는 매 프레임
+       레이아웃을 다시 계산시켜서(뒤따르는 전체 콘텐츠까지 밀려 리플로우됨) 저사양
+       PC·VDI·원격 화면에서 뚝뚝 끊겨 보인다. 대신 레이아웃 높이는 최종 값으로 한 번에
+       고정해 리플로우를 한 번만 일으키고, 그 사이 눈에 보이는 크기 변화는 GPU 합성만
+       필요한 transform:scaleY() 로 처리한다(FLIP 기법). */
     function toggleCatFull(){
       if(!showAllBtn || !fullListEl) return;
       var tiles = box.querySelectorAll(".cs-tile");
@@ -5596,14 +5601,26 @@ if(navigator.sendBeacon){try{navigator.sendBeacon("api/site-visit");}catch(e){}}
            하단 텍스트가 따라 밀려 올라오며 겹쳐 보이는 것을 막는다. */
         box.classList.add("cs-text-hidden");
         setTimeout(function(){
-          tiles.forEach(function(t){ t.style.height = t.offsetHeight + "px"; t.style.aspectRatio = "auto"; });
-          if(tiles[0]) void tiles[0].offsetHeight;
+          var origH = [];
+          tiles.forEach(function(t, i){
+            origH[i] = t.offsetHeight;
+            t.style.height = origH[i] + "px";      /* 레이아웃 높이는 지금 그대로 고정 */
+            t.style.aspectRatio = "auto";
+            t.style.transformOrigin = "top";
+          });
+          if(tiles[0]) void tiles[0].offsetHeight;   /* 위 상태를 강제로 반영시킨 뒤에야 */
           requestAnimationFrame(function(){
-            tiles.forEach(function(t){ t.style.height = CAT_COMPACT_H + "px"; });
+            tiles.forEach(function(t, i){
+              t.style.transition = "transform .45s cubic-bezier(.4,0,.2,1)";
+              t.style.transform = "scaleY(" + (CAT_COMPACT_H / origH[i]) + ")";
+            });
           });
           setTimeout(function(){
             box.classList.add("is-compact");
-            tiles.forEach(function(t){ t.style.height = ""; t.style.aspectRatio = ""; });
+            tiles.forEach(function(t){
+              t.style.height = ""; t.style.aspectRatio = "";
+              t.style.transform = ""; t.style.transformOrigin = ""; t.style.transition = "";
+            });
             buildFullList();
             requestAnimationFrame(function(){
               fullListEl.classList.add("open");
@@ -5621,14 +5638,26 @@ if(navigator.sendBeacon){try{navigator.sendBeacon("api/site-visit");}catch(e){}}
           tiles.forEach(function(t){ t.style.height = CAT_COMPACT_H + "px"; t.style.aspectRatio = "auto"; });
           box.classList.remove("is-compact");
           if(tiles[0]) void tiles[0].offsetHeight;
+          var fullH = [];
+          tiles.forEach(function(t, i){
+            var w = t.getBoundingClientRect().width;
+            fullH[i] = w * 4 / 3;
+            t.style.transformOrigin = "top";
+            t.style.height = fullH[i] + "px";      /* 최종 레이아웃 높이를 지금 한 번에 확정 */
+            t.style.transform = "scaleY(" + (CAT_COMPACT_H / fullH[i]) + ")"; /* 그 상태에서 시각적으로는 압축 크기 그대로 보이게 */
+          });
+          if(tiles[0]) void tiles[0].offsetHeight;   /* 위 상태를 강제로 반영시킨 뒤에야 */
           requestAnimationFrame(function(){
             tiles.forEach(function(t){
-              var w = t.getBoundingClientRect().width;
-              t.style.height = (w * 4 / 3) + "px";
+              t.style.transition = "transform .45s cubic-bezier(.4,0,.2,1)";
+              t.style.transform = "scaleY(1)";
             });
           });
           setTimeout(function(){
-            tiles.forEach(function(t){ t.style.height = ""; t.style.aspectRatio = ""; });
+            tiles.forEach(function(t){
+              t.style.height = ""; t.style.aspectRatio = "";
+              t.style.transform = ""; t.style.transformOrigin = ""; t.style.transition = "";
+            });
             box.classList.remove("cs-text-hidden");
           }, 480);
         }, 420);
@@ -5768,6 +5797,19 @@ if(navigator.sendBeacon){try{navigator.sendBeacon("api/site-visit");}catch(e){}}
     });
   })();
 
+})();
+</script>
+<script>
+(function(){
+  /* 화면 밖으로 스크롤되어도 히어로 영상이 계속 디코딩되면 다른 애니메이션(TOP5
+     마퀴, 카테고리 타일 등)과 자원을 다투다 화면이 끊기거나 깨져 보일 수 있다.
+     보일 때만 재생한다. */
+  var video = document.querySelector(".hero-bg-video");
+  if(!video || !("IntersectionObserver" in window)) return;
+  new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting) video.play().catch(function(){});
+    else video.pause();
+  }, {threshold:0}).observe(video);
 })();
 </script>
 </body>
