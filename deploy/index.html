@@ -5770,21 +5770,6 @@ if(navigator.sendBeacon){try{navigator.sendBeacon("api/site-visit");}catch(e){}}
 
 })();
 </script>
-<script>
-(function(){
-  var video = document.querySelector(".hero-bg-video");
-  if(!video) return;
-  var startTime = 3.0;
-  var endTime = 8.0;
-  video.addEventListener("loadedmetadata", function(){ video.currentTime = startTime; });
-  video.addEventListener("timeupdate", function(){
-    if(video.currentTime >= endTime){
-      video.currentTime = startTime;
-      video.play();
-    }
-  });
-})();
-</script>
 </body>
 </html>
 
