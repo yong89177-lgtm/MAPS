@@ -329,6 +329,9 @@
   /* 상단 아이콘 버튼: 게시판은 회전 안 함 */
   .gear.nospin:hover{transform:none}
   .theme-wrap{position:relative}
+  #themeBtn .theme-ico-moon{display:none}
+  :root[data-theme="dark"] #themeBtn .theme-ico-sun{display:none}
+  :root[data-theme="dark"] #themeBtn .theme-ico-moon{display:block}
   .bell{position:relative;background:none;border:none;color:var(--txt-dim);cursor:pointer;padding:4px;width:34px;height:34px;display:flex;align-items:center;justify-content:center}
   .bell:hover{color:var(--accent)}
   .bell svg{width:20px;height:20px}
@@ -1787,6 +1790,11 @@
   .cat-showcase.is-compact .cs-body{position:static;display:block;padding:6px 18px 14px}
   .cat-showcase.is-compact .cs-more{display:none}
   .cat-showcase.is-compact .cs-desc{display:none}
+  /* 타일이 커졌다 작아졌다 하는 동안 글씨가 어색하게 밀려 보이지 않도록,
+     크기 변경 전에 먼저 숨기고 변경이 끝난 뒤에 다시 나타나게 한다. */
+  .cs-top,.cs-body{transition:opacity .2s ease}
+  .cat-showcase.cs-text-hidden .cs-top,
+  .cat-showcase.cs-text-hidden .cs-body{opacity:0}
   .cat-fulllist{
     width:100%;max-width:1320px;margin:0 auto;padding:0 28px;box-sizing:border-box;
     max-height:0;opacity:0;overflow:hidden;
@@ -1951,7 +1959,8 @@
       </button>
       <div class="theme-wrap">
         <button class="gear nospin" id="themeBtn" title="화면 모드" aria-label="화이트/다크 모드 전환">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="theme-ico theme-ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
+          <svg class="theme-ico theme-ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
         <div class="theme-menu" id="themeMenu">
           <button data-theme="white"><span class="sw white"></span>화이트</button>
@@ -5583,21 +5592,31 @@ if(navigator.sendBeacon){try{navigator.sendBeacon("api/site-visit");}catch(e){}}
       if(!catFullOpen){
         catFullOpen = true;
         showAllBtn.textContent = "접기";
-        tiles.forEach(function(t){ t.style.height = t.offsetHeight + "px"; t.style.aspectRatio = "auto"; });
-        if(tiles[0]) void tiles[0].offsetHeight;
-        requestAnimationFrame(function(){
-          tiles.forEach(function(t){ t.style.height = CAT_COMPACT_H + "px"; });
-        });
+        /* 먼저 글씨를 지운 다음(200ms) 타일을 줄인다 — 줄어드는 동안
+           하단 텍스트가 따라 밀려 올라오며 겹쳐 보이는 것을 막는다. */
+        box.classList.add("cs-text-hidden");
         setTimeout(function(){
-          box.classList.add("is-compact");
-          tiles.forEach(function(t){ t.style.height = ""; t.style.aspectRatio = ""; });
-          buildFullList();
-          requestAnimationFrame(function(){ fullListEl.classList.add("open"); });
-        }, 480);
+          tiles.forEach(function(t){ t.style.height = t.offsetHeight + "px"; t.style.aspectRatio = "auto"; });
+          if(tiles[0]) void tiles[0].offsetHeight;
+          requestAnimationFrame(function(){
+            tiles.forEach(function(t){ t.style.height = CAT_COMPACT_H + "px"; });
+          });
+          setTimeout(function(){
+            box.classList.add("is-compact");
+            tiles.forEach(function(t){ t.style.height = ""; t.style.aspectRatio = ""; });
+            buildFullList();
+            requestAnimationFrame(function(){
+              fullListEl.classList.add("open");
+              box.classList.remove("cs-text-hidden");
+            });
+          }, 480);
+        }, 200);
       }else{
         catFullOpen = false;
         showAllBtn.textContent = "전체보기";
         fullListEl.classList.remove("open");
+        /* 압축 타일의 글씨를 먼저 지우고, 다 펼쳐진 뒤에야 글씨를 다시 보여준다. */
+        box.classList.add("cs-text-hidden");
         setTimeout(function(){
           tiles.forEach(function(t){ t.style.height = CAT_COMPACT_H + "px"; t.style.aspectRatio = "auto"; });
           box.classList.remove("is-compact");
@@ -5610,6 +5629,7 @@ if(navigator.sendBeacon){try{navigator.sendBeacon("api/site-visit");}catch(e){}}
           });
           setTimeout(function(){
             tiles.forEach(function(t){ t.style.height = ""; t.style.aspectRatio = ""; });
+            box.classList.remove("cs-text-hidden");
           }, 480);
         }, 420);
       }
