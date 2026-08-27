@@ -58,6 +58,7 @@ const HOST = process.env.HOST || "0.0.0.0";
 
 const STATIC = {
   "/hero-bg.mp4": { file: path.join(__dirname, "hero-bg.mp4"), type: "video/mp4" },
+  "/hero-bg-poster.jpg": { file: path.join(__dirname, "hero-bg-poster.jpg"), type: "image/jpeg" },
 };
 
 /* 영상/대용량 파일은 Range 요청(구간 요청)을 반드시 지원해야 한다 — 이게 없으면

@@ -980,6 +980,9 @@
   body.lite{--blur:0px}
   body.lite .overlay{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(15,23,42,.6)}
   body.lite .modal{backdrop-filter:none;-webkit-backdrop-filter:none}
+  /* 영상 자동재생·TOP5 자동 스크롤도 계속 움직이는 요소라 VDI 에서 버벅임의
+     주요 원인이 된다 — JS 가 body.lite 를 붙일 때 함께 정지시킨다(선언적 백업). */
+  body.lite .marquee-track-outer{animation-play-state:paused}
   .btn,.minibtn,.home-btn,.board-open-btn,.orgtab,.lfile-btn,.sf-file,.share-fchip,.lchip,.prep-btn,.chip-q,.like-btn{border-radius:var(--radius)}
   .btn-ghost,.minibtn,.home-btn,.board-open-btn,.orgtab,.lfile-btn,.sf-file,.share-fchip,.lchip,.prep-btn,.chip-q,.like-btn{
     background:rgba(var(--tint-rgb),.06);border:1px solid var(--panel-line);color:var(--txt-dim)}
@@ -1980,7 +1983,7 @@
 
     <!-- 히어로 — 영상 배경(bg-chip.mp4) 풀스크린 히어로 -->
     <div class="hero hero-media-hero reveal">
-      <video class="hero-bg-video" autoplay muted loop playsinline>
+      <video class="hero-bg-video" autoplay muted loop playsinline poster="/hero-bg-poster.jpg">
         <source src="/hero-bg.mp4" type="video/mp4">
       </video>
       <div class="hero-scrim"></div>
@@ -5799,15 +5802,59 @@ if(navigator.sendBeacon){try{navigator.sendBeacon("api/site-visit");}catch(e){}}
 </script>
 <script>
 (function(){
+  var video = document.querySelector(".hero-bg-video");
+  var marquee = document.querySelector(".marquee-track-outer");
+
   /* 화면 밖으로 스크롤되어도 히어로 영상이 계속 디코딩되면 다른 애니메이션(TOP5
      마퀴, 카테고리 타일 등)과 자원을 다투다 화면이 끊기거나 깨져 보일 수 있다.
      보일 때만 재생한다. */
-  var video = document.querySelector(".hero-bg-video");
-  if(!video || !("IntersectionObserver" in window)) return;
-  new IntersectionObserver(function(entries){
-    if(entries[0].isIntersecting) video.play().catch(function(){});
-    else video.pause();
-  }, {threshold:0}).observe(video);
+  if(video && "IntersectionObserver" in window){
+    new IntersectionObserver(function(entries){
+      if(!liteOn && entries[0].isIntersecting) video.play().catch(function(){});
+      else video.pause();
+    }, {threshold:0}).observe(video);
+  }
+
+  /* ---------------------------------------------------------------
+     저사양·VDI 세션 자동 감지 (body.lite)
+     사내 클라우드/원격 데스크톱처럼 화면 전송 자체가 느린 경우, 영상 자동재생과
+     TOP5 자동 스크롤처럼 "계속 움직이는" 요소가 가장 먼저 버벅임·깨짐으로
+     드러난다. 이런 세션은 대부분 접근성 설정으로 prefers-reduced-motion 이 켜져
+     있으므로 그것부터 확인하고, 꺼져 있어도 실제 프레임 시간을 재서 계속 느리면
+     뒤늦게라도 무거운 움직임을 끈다. 한 번 켜진 lite 모드는 되돌리지 않는다
+     (오락가락하는 게 더 어색하다).
+     --------------------------------------------------------------- */
+  var liteOn = false;
+  function goLite(){
+    if(liteOn) return;
+    liteOn = true;
+    document.body.classList.add("lite");
+    if(video) video.pause();
+    if(marquee) marquee.style.animationPlayState = "paused";
+  }
+  if(video){
+    video.addEventListener("play", function(){ if(liteOn) video.pause(); });
+  }
+
+  var reduced = false;
+  try{ reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){}
+  if(reduced){
+    goLite();
+  }else{
+    var acc = 0, cnt = 0, last = 0;
+    function tick(now){
+      if(last){
+        acc += (now - last); cnt++;
+        if(cnt >= 60){
+          var avg = acc / cnt; acc = 0; cnt = 0;
+          if(avg > 40){ goLite(); return; }
+        }
+      }
+      last = now;
+      if(!liteOn) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
 })();
 </script>
 </body>
